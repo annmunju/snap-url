@@ -72,7 +72,6 @@ export function DocumentDetailScreen({ route, navigation }: Props) {
 
   const doc = documentQuery.data.document;
   const title = cleanTitle(doc.title);
-  const description = doc.description?.trim() || doc.summary?.trim() || "설명이 없습니다.";
 
   const onDelete = () => {
     Alert.alert("문서 삭제", "정말 삭제하시겠습니까?", [
@@ -106,15 +105,15 @@ export function DocumentDetailScreen({ route, navigation }: Props) {
 
       <View style={styles.section}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.link} onPress={() => openUrl(doc.url)}>
+        <Text style={styles.url} onPress={() => openUrl(doc.url)}>
           {doc.url}
         </Text>
         <Text style={styles.meta}>{fromNow(doc.created_at)}</Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>설명</Text>
-        <Text style={styles.body}>{description}</Text>
+        <Text style={styles.sectionTitle}>요약</Text>
+        <Text style={styles.body}>{doc.summary || "요약이 없습니다."}</Text>
       </View>
 
       <View style={styles.section}>
@@ -122,7 +121,7 @@ export function DocumentDetailScreen({ route, navigation }: Props) {
         <View style={styles.links}>
           {doc.links.map((link, index) => (
             <Pressable key={`${link.url}-${index}`} style={styles.linkCard} onPress={() => openUrl(link.url)}>
-              <Text style={styles.link}>{link.url}</Text>
+              <Text style={styles.linkUrl}>{link.url}</Text>
               <Text style={styles.linkDesc}>{link.content}</Text>
             </Pressable>
           ))}
@@ -201,14 +200,20 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   section: {
-    gap: spacing.small,
+    gap: 12,
   },
   title: {
     ...typography.screenTitle,
     color: colors.textPrimary,
   },
-  link: {
-    ...typography.body,
+  url: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: colors.primary,
+  },
+  linkUrl: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
     color: colors.primary,
   },
   meta: {
@@ -234,7 +239,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 4,
   },
   linkDesc: {
     fontFamily: "Inter_400Regular",

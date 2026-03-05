@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
     paddingTop: 14,
-    gap: spacing.medium,
+    gap: spacing.small,
   },
   headerRow: {
     flexDirection: "row",
@@ -113,6 +113,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   listContainer: {
+    paddingTop: spacing.small,
     gap: spacing.medium,
   },
   empty: {

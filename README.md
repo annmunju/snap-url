@@ -3,7 +3,7 @@
 AI 기반 URL 수집/정리/요약 서비스 모노레포입니다.
 
 ## 디렉터리 구조
-- `backend/`: Node.js + TypeScript API 서버
+- `backend/`: Python + FastAPI API 서버
 - `frontend/`: iOS/UI 클라이언트 작업 폴더
 - `docs/`: 공통 문서 및 명세
 
@@ -19,8 +19,10 @@ AI 기반 URL 수집/정리/요약 서비스 모노레포입니다.
 ```bash
 cd backend
 cp .env.example .env
-npm install
-npm run dev
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python run.py
 ```
 
 ## 프론트엔드(iOS 앱) 실행

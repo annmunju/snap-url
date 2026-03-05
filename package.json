@@ -2,10 +2,10 @@
   "name": "snap-url-monorepo",
   "private": true,
   "scripts": {
-    "build": "npm --prefix backend run build",
-    "dev": "npm --prefix backend run dev",
-    "start": "npm --prefix backend run start",
-    "backend:install": "npm --prefix backend install",
+    "build": "echo 'No build step for Python backend'",
+    "dev": "python3 backend/run.py",
+    "start": "python3 backend/run.py",
+    "backend:install": "python3 -m pip install -r backend/requirements.txt",
     "frontend:install": "npm --prefix frontend install",
     "frontend:start": "npm --prefix frontend run start",
     "frontend:ios": "npm --prefix frontend run ios"
