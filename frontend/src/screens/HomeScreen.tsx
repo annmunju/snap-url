@@ -8,11 +8,17 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 import { fromNow } from "@/utils/time";
 
-const INGEST_LIST_LIMIT = 10;
+const INGEST_ACTIVE_LIST_LIMIT = 100;
 const INGEST_LIST_POLL_MS = 5000;
 const INGEST_JOBS_QUERY_KEY = ["ingestJobs"] as const;
 
 const ACTIVE_STATUSES: IngestJobStatus[] = ["queued", "running"];
+const ACTIVE_STATUS_PRIORITY: Record<IngestJobStatus, number> = {
+  running: 0,
+  queued: 1,
+  failed: 2,
+  succeeded: 3,
+};
 
 function isValidUrl(value: string) {
   try {
@@ -41,26 +47,40 @@ export function HomeScreen() {
     },
   });
 
-  const ingestJobsQuery = useQuery({
-    queryKey: [...INGEST_JOBS_QUERY_KEY, INGEST_LIST_LIMIT],
-    queryFn: () => listIngestJobs(INGEST_LIST_LIMIT),
+  const queuedJobsQuery = useQuery({
+    queryKey: [...INGEST_JOBS_QUERY_KEY, "queued", INGEST_ACTIVE_LIST_LIMIT],
+    queryFn: () => listIngestJobs(INGEST_ACTIVE_LIST_LIMIT, "queued"),
+    staleTime: 0,
+    refetchInterval: INGEST_LIST_POLL_MS,
+    refetchOnWindowFocus: true,
+  });
+
+  const runningJobsQuery = useQuery({
+    queryKey: [...INGEST_JOBS_QUERY_KEY, "running", INGEST_ACTIVE_LIST_LIMIT],
+    queryFn: () => listIngestJobs(INGEST_ACTIVE_LIST_LIMIT, "running"),
     staleTime: 0,
     refetchInterval: INGEST_LIST_POLL_MS,
     refetchOnWindowFocus: true,
   });
 
   const activeJobs = useMemo(
-    () =>
-      (ingestJobsQuery.data?.items ?? []).filter((item) =>
-        ACTIVE_STATUSES.includes(item.status),
-      ),
-    [ingestJobsQuery.data?.items],
-  );
-
-  const failedJobs = useMemo(
-    () =>
-      (ingestJobsQuery.data?.items ?? []).filter((item) => item.status === "failed"),
-    [ingestJobsQuery.data?.items],
+    () => {
+      const merged = [...(queuedJobsQuery.data?.items ?? []), ...(runningJobsQuery.data?.items ?? [])];
+      const deduped = new Map<number, IngestJobListItem>();
+      for (const item of merged) {
+        if (ACTIVE_STATUSES.includes(item.status)) {
+          deduped.set(item.id, item);
+        }
+      }
+      return [...deduped.values()].sort((a, b) => {
+        const byStatus = ACTIVE_STATUS_PRIORITY[a.status] - ACTIVE_STATUS_PRIORITY[b.status];
+        if (byStatus !== 0) {
+          return byStatus;
+        }
+        return b.id - a.id;
+      });
+    },
+    [queuedJobsQuery.data?.items, runningJobsQuery.data?.items],
   );
 
   const onSubmit = () => {
@@ -74,7 +94,7 @@ export function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      <Text style={styles.title}>Snap URL</Text>
+      <Text style={styles.title}>ARCHIVE-URL</Text>
       <View style={[styles.inputCard, !!error && styles.errorBorder]}>
         <TextInput
           placeholder="https://example.com"
@@ -90,16 +110,20 @@ export function HomeScreen() {
       <PrimaryButton label="수집 시작" onPress={onSubmit} disabled={!valid} loading={mutation.isPending} />
       <View style={styles.jobsSection}>
         <Text style={styles.jobsTitle}>수집 요청 현황</Text>
-        {ingestJobsQuery.isLoading ? <Text style={styles.jobsMeta}>불러오는 중...</Text> : null}
-        {ingestJobsQuery.isError ? <Text style={styles.jobsError}>요청 현황을 불러오지 못했습니다.</Text> : null}
-        {!ingestJobsQuery.isLoading && !ingestJobsQuery.isError && activeJobs.length === 0 ? (
+        {queuedJobsQuery.isLoading || runningJobsQuery.isLoading ? (
+          <Text style={styles.jobsMeta}>불러오는 중...</Text>
+        ) : null}
+        {queuedJobsQuery.isError || runningJobsQuery.isError ? (
+          <Text style={styles.jobsError}>요청 현황을 불러오지 못했습니다.</Text>
+        ) : null}
+        {!queuedJobsQuery.isLoading &&
+        !runningJobsQuery.isLoading &&
+        !queuedJobsQuery.isError &&
+        !runningJobsQuery.isError &&
+        activeJobs.length === 0 ? (
           <Text style={styles.jobsMeta}>진행 중인 요청이 없습니다.</Text>
         ) : null}
         {activeJobs.map((item) => (
-          <IngestJobRow key={item.id} item={item} />
-        ))}
-        {failedJobs.length > 0 ? <Text style={styles.failedTitle}>최근 실패</Text> : null}
-        {failedJobs.map((item) => (
           <IngestJobRow key={item.id} item={item} />
         ))}
       </View>
@@ -223,12 +247,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: colors.error,
-  },
-  failedTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 2,
   },
   jobRow: {
     borderWidth: 1,

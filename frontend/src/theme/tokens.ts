@@ -26,8 +26,8 @@ export const radius = {
 
 export const typography = {
   appTitle: {
-    fontFamily: "Inter_800ExtraBold",
-    fontSize: 40,
+    fontFamily: "Inter_700ExtraBold",
+    fontSize: 30,
   },
   screenTitle: {
     fontFamily: "Inter_700Bold",

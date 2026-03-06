@@ -7,7 +7,12 @@ import httpx
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 
-from .categories import classify_category_key, get_category_keys, normalize_category_key
+from .categories import (
+    classify_category_key_with_confidence,
+    enforce_category_policy,
+    get_category_keys,
+    normalize_category_key,
+)
 from .db import db
 from .settings import settings
 
@@ -218,7 +223,16 @@ def _extract_json_object(raw_text: str) -> Optional[Dict[str, Any]]:
 
 async def classify_category_node(state: PipelineState) -> dict[str, Any]:
     extracted = state["extracted"]
-    fallback = classify_category_key(extracted["title"], extracted["description"], state["summary"])
+    classification_texts = (
+        extracted["title"],
+        extracted["description"],
+        state["summary"],
+        extracted["content"][:2000],
+    )
+    fallback, confident = classify_category_key_with_confidence(*classification_texts, source_url=state["url"])
+
+    if confident:
+        return {"category_key": fallback}
 
     if _llm is None:
         return {"category_key": fallback}
@@ -229,7 +243,11 @@ async def classify_category_node(state: PipelineState) -> dict[str, Any]:
         [
             "다음 문서를 분류해라.",
             f"허용 category_key: {', '.join(allowed_keys)}",
-            f"반드시 위 키 중 하나만 사용하고, 확신이 낮으면 {fallback} 사용.",
+            "분류 규칙:",
+            "1) 뉴스/기사/보도문 형식이면 주제와 무관하게 news를 우선한다.",
+            "2) tech는 소프트웨어 개발/프로그래밍/엔지니어링 문서일 때만 사용한다.",
+            "3) business는 시장/경영/투자/마케팅/기업 전략 주제일 때 사용한다.",
+            f"4) 애매하면 {fallback} 사용.",
             '출력은 JSON 한 줄만: {"category_key":"..."}',
             "문서 제목:",
             extracted["title"] or "(제목 없음)",
@@ -247,7 +265,9 @@ async def classify_category_node(state: PipelineState) -> dict[str, Any]:
         result_content = result.content if isinstance(result.content, str) else str(result.content)
         payload = _extract_json_object(result_content)
         candidate = payload.get("category_key") if isinstance(payload, dict) else None
-        return {"category_key": normalize_category_key(candidate)}
+        normalized = normalize_category_key(candidate)
+        policy_checked = enforce_category_policy(normalized, *classification_texts, source_url=state["url"])
+        return {"category_key": policy_checked}
     except Exception:  # noqa: BLE001
         return {"category_key": fallback}
 
