@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import type { DocumentListItem } from "@/api/types";
-import { colors, radius } from "@/theme/tokens";
+import { colors } from "@/theme/tokens";
 import { DocumentCard } from "./DocumentCard";
 
 const LEFT_ACTION_WIDTH = 92;
@@ -153,8 +153,10 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     flex: 1,
-    borderRadius: radius.md,
-    backgroundColor: colors.error,
+    borderRadius: 24,
+    backgroundColor: "#FFE9E7",
+    borderWidth: 1,
+    borderColor: "#FFD5D1",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -162,14 +164,17 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   deleteText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "System",
+    fontWeight: "700",
     fontSize: 15,
-    color: "#FFFFFF",
+    color: colors.error,
   },
   pinButton: {
     flex: 1,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
+    borderRadius: 24,
+    backgroundColor: "#E7F2FF",
+    borderWidth: 1,
+    borderColor: "#D4E7FF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -177,8 +182,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   pinText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "System",
+    fontWeight: "700",
     fontSize: 15,
-    color: "#FFFFFF",
+    color: colors.primary,
   },
 });

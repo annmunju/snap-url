@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { DocumentListItem } from "@/api/types";
-import { colors, radius, spacing } from "@/theme/tokens";
+import { colors } from "@/theme/tokens";
 import { fromNow } from "@/utils/time";
 import { cleanTitle, getListDescription } from "@/utils/text";
 
@@ -47,17 +47,19 @@ function safeDomain(url: string) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: radius.md,
-    padding: spacing.medium,
-    gap: 10,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    gap: 8,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: colors.border,
   },
   pinnedCard: {
-    borderColor: colors.primary,
+    borderColor: "#BFD9FB",
+    backgroundColor: "#F7FBFF",
   },
   pressed: {
-    opacity: 0.9,
+    opacity: 0.92,
   },
   titleRow: {
     flexDirection: "row",
@@ -66,23 +68,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 17,
+    lineHeight: 23,
     color: colors.textPrimary,
     flex: 1,
   },
   pinBadge: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.primary,
-    backgroundColor: "#E8F2FF",
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 12,
+    lineHeight: 15,
+    color: "#0553B1",
+    backgroundColor: "#DDEEFF",
     borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   description: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "System",
     fontSize: 14,
     lineHeight: 20,
     color: colors.textSecondary,
@@ -93,8 +98,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   metaText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
+    fontFamily: "System",
+    fontSize: 13,
     color: colors.textSecondary,
   },
 });

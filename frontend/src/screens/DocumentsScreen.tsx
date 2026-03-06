@@ -9,7 +9,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { deleteDocument, listCategories, listDocuments, patchDocument } from "@/api/documents";
 import { CategoryChips } from "@/components/CategoryChips";
 import { SwipeableDocumentCard } from "@/components/SwipeableDocumentCard";
-import { colors, spacing, typography } from "@/theme/tokens";
+import { colors, typography } from "@/theme/tokens";
 import type { RootStackParamList, TabParamList } from "@/types/navigation";
 import type { CategoryItem, DocumentListItem } from "@/api/types";
 import { ALL_CATEGORY_KEY, applyCategoryFilter, FALLBACK_CATEGORY_KEY, type CategorySelection } from "@/utils/category";
@@ -97,11 +97,8 @@ export function DocumentsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const timer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["documents"] });
-        queryClient.invalidateQueries({ queryKey: ["categories"] });
-      }, 1000);
-      return () => clearTimeout(timer);
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
     }, [queryClient]),
   );
 
@@ -192,20 +189,29 @@ export function DocumentsScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>내 문서</Text>
-        <Pressable
-          style={styles.refreshButton}
-          onPress={() => {
-            queryClient.invalidateQueries({ queryKey: ["documents"] });
-            queryClient.invalidateQueries({ queryKey: ["categories"] });
-          }}
-        >
-          <Text style={styles.refreshText}>↻</Text>
-        </Pressable>
+      <View style={styles.hero}>
+        <Text style={styles.eyebrow}>Library</Text>
+        <View style={styles.headerRow}>
+          <View style={styles.titleBlock}>
+            <Text style={styles.title}>내 문서</Text>
+          </View>
+          <Pressable
+            style={styles.refreshButton}
+            onPress={() => {
+              queryClient.invalidateQueries({ queryKey: ["documents"] });
+              queryClient.invalidateQueries({ queryKey: ["categories"] });
+            }}
+          >
+            <Text style={styles.refreshText}>↻</Text>
+          </Pressable>
+        </View>
       </View>
+
       <View style={styles.categorySection}>
-        <Text style={styles.categoryLabel}>카테고리</Text>
+        <View style={styles.categoryHeader}>
+          <Text style={styles.categoryLabel}>카테고리</Text>
+          <Text style={styles.categoryMeta}>{filtered.length}</Text>
+        </View>
         <CategoryChips options={categoryOptions} value={category} onChange={setCategory} />
       </View>
 
@@ -244,51 +250,84 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
     paddingTop: 14,
-    gap: spacing.small,
+    gap: 18,
+  },
+  hero: {
+    gap: 8,
+  },
+  eyebrow: {
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: colors.textSecondary,
   },
   headerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
+    gap: 16,
+  },
+  titleBlock: {
+    flex: 1,
+    gap: 0,
   },
   title: {
     ...typography.screenTitle,
     color: colors.textPrimary,
+    letterSpacing: -0.6,
   },
   refreshButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.border,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
   refreshText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 22,
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 18,
     color: colors.textPrimary,
-    lineHeight: 28,
+    lineHeight: 20,
+  },
+  categorySection: {
+    gap: 10,
+    paddingBottom: 2,
+  },
+  categoryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   categoryLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "System",
+    fontWeight: "600",
     fontSize: 15,
     color: colors.textPrimary,
   },
-  categorySection: {
-    gap: 8,
-    paddingBottom: 4,
+  categoryMeta: {
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   list: {
     flex: 1,
   },
   listContainer: {
-    paddingTop: spacing.small,
-    gap: spacing.medium,
+    paddingTop: 2,
+    gap: 12,
   },
   empty: {
-    paddingTop: spacing.large,
+    paddingTop: 36,
     textAlign: "center",
     color: colors.textSecondary,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "System",
+    fontSize: 15,
   },
 });

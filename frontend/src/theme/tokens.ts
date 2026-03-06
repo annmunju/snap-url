@@ -1,13 +1,13 @@
 export const colors = {
-  background: "#FFFFFF",
-  primary: "#007AFF",
-  success: "#34C759",
-  error: "#FF3B30",
-  textPrimary: "#000000",
-  textSecondary: "#71717A",
-  card: "#F5F5F5",
+  background: "#F6F7FB",
+  primary: "#0A84FF",
+  success: "#30D158",
+  error: "#FF453A",
+  textPrimary: "#111114",
+  textSecondary: "#6B6F7B",
+  card: "#FFFFFF",
   input: "#FFFFFF",
-  border: "#E5E5EA",
+  border: "#D9DCE5",
 } as const;
 
 export const spacing = {
@@ -18,31 +18,36 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 12,
+  sm: 14,
   md: 16,
-  lg: 26,
-  xl: 36,
+  lg: 24,
+  xl: 32,
 } as const;
 
 export const typography = {
   appTitle: {
-    fontFamily: "Inter_700ExtraBold",
-    fontSize: 30,
+    fontFamily: "System",
+    fontSize: 34,
+    fontWeight: "700",
   },
   screenTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "System",
     fontSize: 28,
+    fontWeight: "700",
   },
   sectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "System",
     fontSize: 20,
+    fontWeight: "600",
   },
   body: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
+    fontFamily: "System",
+    fontSize: 17,
+    fontWeight: "400",
   },
   button: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "System",
     fontSize: 17,
+    fontWeight: "600",
   },
 } as const;

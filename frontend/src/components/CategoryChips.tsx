@@ -30,31 +30,35 @@ export function CategoryChips({ options, value, onChange }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 8,
+    gap: 6,
     paddingVertical: 2,
   },
   chip: {
-    minHeight: 34,
-    borderRadius: radius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    minHeight: 30,
+    borderRadius: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
   },
   activeChip: {
-    backgroundColor: colors.primary,
+    backgroundColor: "#E7F2FF",
+    borderColor: "#D4E7FF",
   },
   inactiveChip: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.card,
+    borderColor: colors.border,
   },
   label: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 13,
   },
   activeText: {
-    color: "#fff",
+    color: colors.primary,
   },
   inactiveText: {
-    color: colors.textPrimary,
+    color: colors.textSecondary,
   },
 });

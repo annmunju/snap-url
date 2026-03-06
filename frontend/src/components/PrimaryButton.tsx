@@ -23,7 +23,7 @@ export function PrimaryButton({ label, onPress, disabled, loading }: Props) {
 
 const styles = StyleSheet.create({
   button: {
-    height: 56,
+    height: 46,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     alignItems: "center",

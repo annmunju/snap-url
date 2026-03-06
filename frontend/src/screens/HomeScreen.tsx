@@ -51,16 +51,16 @@ export function HomeScreen() {
     queryKey: [...INGEST_JOBS_QUERY_KEY, "queued", INGEST_ACTIVE_LIST_LIMIT],
     queryFn: () => listIngestJobs(INGEST_ACTIVE_LIST_LIMIT, "queued"),
     staleTime: 0,
-    refetchInterval: INGEST_LIST_POLL_MS,
-    refetchOnWindowFocus: true,
+    refetchInterval: (query) => ((query.state.data?.items?.length ?? 0) > 0 ? INGEST_LIST_POLL_MS : false),
+    refetchOnWindowFocus: false,
   });
 
   const runningJobsQuery = useQuery({
     queryKey: [...INGEST_JOBS_QUERY_KEY, "running", INGEST_ACTIVE_LIST_LIMIT],
     queryFn: () => listIngestJobs(INGEST_ACTIVE_LIST_LIMIT, "running"),
     staleTime: 0,
-    refetchInterval: INGEST_LIST_POLL_MS,
-    refetchOnWindowFocus: true,
+    refetchInterval: (query) => ((query.state.data?.items?.length ?? 0) > 0 ? INGEST_LIST_POLL_MS : false),
+    refetchOnWindowFocus: false,
   });
 
   const activeJobs = useMemo(
@@ -94,22 +94,34 @@ export function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      <Text style={styles.title}>ARCHIVE-URL</Text>
-      <View style={[styles.inputCard, !!error && styles.errorBorder]}>
-        <TextInput
-          placeholder="https://example.com"
-          value={url}
-          onChangeText={setUrl}
-          keyboardType="url"
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.input}
-        />
+      <View style={styles.hero}>
+        <Text style={styles.eyebrow}>Capture once, review later</Text>
+        <Text style={styles.title}>ARCHIVE-URL</Text>
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      <PrimaryButton label="수집 시작" onPress={onSubmit} disabled={!valid} loading={mutation.isPending} />
+
+      <View style={styles.composeSection}>
+        <Text style={styles.composeLabel}>수집 요청</Text>
+        <View style={[styles.inputCard, !!error && styles.errorBorder]}>
+          <TextInput
+            placeholder="https://example.com"
+            placeholderTextColor={colors.textSecondary}
+            value={url}
+            onChangeText={setUrl}
+            keyboardType="url"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.input}
+          />
+        </View>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <PrimaryButton label="수집 시작" onPress={onSubmit} disabled={!valid} loading={mutation.isPending} />
+      </View>
+
       <View style={styles.jobsSection}>
-        <Text style={styles.jobsTitle}>수집 요청 현황</Text>
+        <View style={styles.jobsHeading}>
+          <Text style={styles.jobsTitle}>진행 중인 요청</Text>
+          <Text style={styles.jobsCount}>{activeJobs.length}</Text>
+        </View>
         {queuedJobsQuery.isLoading || runningJobsQuery.isLoading ? (
           <Text style={styles.jobsMeta}>불러오는 중...</Text>
         ) : null}
@@ -123,17 +135,21 @@ export function HomeScreen() {
         activeJobs.length === 0 ? (
           <Text style={styles.jobsMeta}>진행 중인 요청이 없습니다.</Text>
         ) : null}
-        {activeJobs.map((item) => (
-          <IngestJobRow key={item.id} item={item} />
-        ))}
+        {activeJobs.length > 0 ? (
+          <View style={styles.activityBlock}>
+            {activeJobs.map((item, index) => (
+              <IngestJobRow key={item.id} item={item} isFirst={index === 0} />
+            ))}
+          </View>
+        ) : null}
       </View>
     </SafeAreaView>
   );
 }
 
-function IngestJobRow({ item }: { item: IngestJobListItem }) {
+function IngestJobRow({ item, isFirst }: { item: IngestJobListItem; isFirst: boolean }) {
   return (
-    <View style={styles.jobRow}>
+    <View style={[styles.jobRow, !isFirst && styles.jobRowDivider]}>
       <View style={styles.jobHeader}>
         <Text style={styles.jobId}>#{item.id}</Text>
         <StatusBadge status={item.status} />
@@ -168,31 +184,31 @@ const STATUS_LABEL: Record<IngestJobStatus, string> = {
 
 const STATUS_STYLE: Record<IngestJobStatus, object> = {
   queued: {
-    backgroundColor: colors.border,
+    backgroundColor: "#EEF1F5",
   },
   running: {
-    backgroundColor: colors.primary,
+    backgroundColor: "#E7F2FF",
   },
   failed: {
-    backgroundColor: colors.error,
+    backgroundColor: "#FFE9E7",
   },
   succeeded: {
-    backgroundColor: colors.success,
+    backgroundColor: "#E8F8EE",
   },
 };
 
 const STATUS_TEXT_STYLE: Record<IngestJobStatus, object> = {
   queued: {
-    color: colors.textPrimary,
+    color: colors.textSecondary,
   },
   running: {
-    color: "#FFFFFF",
+    color: colors.primary,
   },
   failed: {
-    color: "#FFFFFF",
+    color: "#D63A31",
   },
   succeeded: {
-    color: "#FFFFFF",
+    color: "#249B50",
   },
 };
 
@@ -201,16 +217,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 24,
+    paddingTop: 12,
+    gap: 24,
+  },
+  hero: {
+    gap: 8,
     paddingTop: 8,
-    gap: spacing.medium,
+  },
+  eyebrow: {
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: colors.textSecondary,
   },
   title: {
     ...typography.appTitle,
     color: colors.textPrimary,
+    letterSpacing: -0.8,
+  },
+  composeSection: {
+    gap: 12,
+  },
+  composeLabel: {
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 15,
+    color: colors.textPrimary,
   },
   inputCard: {
-    height: 56,
-    borderRadius: radius.md,
+    height: 52,
+    borderRadius: 18,
     backgroundColor: colors.input,
     borderWidth: 1,
     borderColor: colors.border,
@@ -225,37 +263,56 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
   },
   errorText: {
-    fontFamily: "Inter_400Regular",
+    ...typography.body,
     color: colors.error,
     fontSize: 13,
   },
   jobsSection: {
-    gap: 10,
-    marginTop: 4,
+    gap: 14,
+    marginTop: 2,
+  },
+  jobsHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   jobsTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
+    ...typography.sectionLabel,
+    fontSize: 17,
     color: colors.textPrimary,
   },
+  jobsCount: {
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
   jobsMeta: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    ...typography.body,
+    fontSize: 14,
     color: colors.textSecondary,
   },
   jobsError: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    ...typography.body,
+    fontSize: 14,
     color: colors.error,
   },
-  jobRow: {
+  activityBlock: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 6,
-    backgroundColor: colors.input,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    overflow: "hidden",
+  },
+  jobRow: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    gap: 8,
+    backgroundColor: colors.card,
+  },
+  jobRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: "#ECEEF3",
   },
   jobHeader: {
     flexDirection: "row",
@@ -263,34 +320,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   jobId: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "System",
+    fontWeight: "600",
     fontSize: 12,
+    letterSpacing: 0.3,
     color: colors.textSecondary,
   },
   jobUrl: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    ...typography.body,
+    fontSize: 15,
     color: colors.textPrimary,
-    lineHeight: 18,
+    lineHeight: 22,
   },
   jobUpdated: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
+    ...typography.body,
+    fontSize: 13,
     color: colors.textSecondary,
   },
   jobError: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
+    ...typography.body,
+    fontSize: 13,
     color: colors.error,
-    lineHeight: 17,
+    lineHeight: 19,
   },
   badge: {
     borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   badgeText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "System",
+    fontWeight: "600",
     fontSize: 11,
   },
 });

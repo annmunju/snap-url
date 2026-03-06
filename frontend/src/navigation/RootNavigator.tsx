@@ -61,8 +61,8 @@ export function RootNavigator() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.border,
-    height: 62,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    height: 58,
     marginHorizontal: 21,
     marginBottom: 21,
     borderRadius: radius.xl,
@@ -72,12 +72,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     elevation: 0,
     position: "absolute",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   tabItem: {
     margin: 0,
     paddingTop: 0,
     paddingBottom: 0,
-    height: 54,
+    height: 50,
   },
   tabIconWrap: {
     height: "100%",
@@ -89,7 +91,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 4,
     borderRadius: radius.lg,
     width: "100%",
     height: "100%",
@@ -98,17 +100,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   tabPillInactive: {
-    backgroundColor: colors.card,
+    backgroundColor: "transparent",
   },
   tabIcon: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 17,
-    lineHeight: 20,
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 16,
+    lineHeight: 18,
   },
   tabLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    letterSpacing: 0.5,
+    fontFamily: "System",
+    fontWeight: "600",
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
   tabLabelActive: {
     color: "#fff",
