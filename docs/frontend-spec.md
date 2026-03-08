@@ -223,6 +223,11 @@ npm run start:staging
 npm run ios:production
 ```
 
+주의:
+
+- Expo는 `.env`를 자동으로 읽기 때문에, 환경 분리는 반드시 `npm run start:staging`, `npm run ios:production` 같은 래퍼 스크립트로 실행한다
+- `.env.staging`만 바꾸고 기존 Metro를 재사용하면 예전 `.env` 값이 남을 수 있다
+
 ## 11. 남은 프론트 우선순위
 
 1. 공유 성공/실패 후 사용자 피드백 정리
