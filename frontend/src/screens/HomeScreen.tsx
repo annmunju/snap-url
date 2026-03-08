@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect } from "@react-navigation/native";
-import { AppState, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, AppState, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { deleteCurrentUserAccount } from "@/api/account";
 import { getDocument } from "@/api/documents";
 import { createIngestJob, listIngestJobs } from "@/api/ingest";
 import type { IngestJob, IngestJobListItem, IngestJobStatus } from "@/api/types";
@@ -128,6 +129,16 @@ export function HomeScreen() {
     },
     onError: (err: Error) => {
       setError(err.message);
+    },
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteCurrentUserAccount,
+    onSuccess: async () => {
+      await signOut();
+    },
+    onError: (err: Error) => {
+      Alert.alert("계정 삭제 실패", err.message);
     },
   });
 
@@ -272,6 +283,22 @@ export function HomeScreen() {
     submitUrl(url, note.trim() || undefined);
   };
 
+  const onDeleteAccount = () => {
+    Alert.alert("계정 삭제", "계정과 연결된 문서 접근이 차단됩니다. 계속할까요?", [
+      {
+        text: "취소",
+        style: "cancel",
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          deleteAccountMutation.mutate();
+        },
+      },
+    ]);
+  };
+
   const panelCount = selectedPanel === "active" ? activeJobs.length : recentFinishedJobs.length;
   const panelIsLoading =
     selectedPanel === "active" ? queuedJobsQuery.isLoading || runningJobsQuery.isLoading : latestJobsQuery.isLoading;
@@ -383,6 +410,11 @@ export function HomeScreen() {
           </View>
           <Text style={styles.title}>ARCHIVE-URL</Text>
           {state.status === "signedIn" ? <Text style={styles.accountMeta}>{state.user.email}</Text> : null}
+          <Pressable style={styles.deleteAccountButton} onPress={onDeleteAccount} disabled={deleteAccountMutation.isPending}>
+            <Text style={styles.deleteAccountButtonText}>
+              {deleteAccountMutation.isPending ? "계정 삭제 중..." : "계정 삭제"}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.composeSection}>
@@ -667,6 +699,16 @@ const styles = StyleSheet.create({
     fontFamily: "System",
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  deleteAccountButton: {
+    alignSelf: "flex-start",
+    paddingTop: 2,
+  },
+  deleteAccountButtonText: {
+    fontFamily: "System",
+    fontWeight: "700",
+    fontSize: 12,
+    color: colors.error,
   },
   signOutButton: {
     paddingHorizontal: 12,

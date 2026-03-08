@@ -18,11 +18,21 @@ export type PendingSignupState =
   | { status: "confirmed"; email: string }
   | null;
 
+export type PasswordRecoveryState =
+  | {
+      email: string | null;
+    }
+  | null;
+
 export type AuthContextValue = {
   state: AuthState;
   pendingSignup: PendingSignupState;
+  passwordRecovery: PasswordRecoveryState;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (email: string, password: string) => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
+  completePasswordReset: (password: string) => Promise<void>;
+  cancelPasswordRecovery: () => Promise<void>;
   clearPendingSignup: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;

@@ -143,6 +143,31 @@ def require_current_user(
     return current_user
 
 
+def require_current_user_allow_deleted(
+    request: Request,
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+    session: Session = Depends(get_session),
+) -> CurrentUser:
+    token = _parse_bearer_token(authorization)
+    claims = _decode_access_token(token)
+
+    repo = UsersRepository(session)
+    user = repo.upsert_from_auth_claims(claims)
+    if user.status == "disabled":
+        raise AuthenticationError("ACCOUNT_DISABLED", "Account disabled", 403)
+
+    session.commit()
+
+    current_user = CurrentUser(
+        id=str(user.id),
+        email=user.email,
+        auth_subject=user.auth_subject,
+        status=user.status,
+    )
+    request.state.current_user = current_user
+    return current_user
+
+
 async def check_supabase_health() -> dict[str, str]:
     if not settings.has_auth_config:
         return {"configured": "false", "status": "not_configured"}

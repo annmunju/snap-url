@@ -14,6 +14,7 @@ from .auth import (
     check_supabase_health,
     get_session,
     require_current_user,
+    require_current_user_allow_deleted,
 )
 from .categories import list_categories
 from .jobs import bootstrap_ingest_worker, enqueue_ingest_job
@@ -172,6 +173,20 @@ async def delete_me(current_user=Depends(require_current_user), session: Session
             "message": "Account deletion scheduled",
         }
     }
+
+
+@app.post("/me/reactivate")
+async def reactivate_me(current_user=Depends(require_current_user_allow_deleted), session: Session = Depends(get_session)):
+    repo = UsersRepository(session)
+    user = repo.get_by_id(current_user.id)
+    if user is None:
+        return JSONResponse(status_code=404, content=error_response("USER_NOT_FOUND", "User not found", False))
+    if user.status == "disabled":
+        return JSONResponse(status_code=403, content=error_response("ACCOUNT_DISABLED", "Account disabled", False))
+    repo.reactivate(user)
+    session.commit()
+    session.refresh(user)
+    return {"user": map_user_response(user)}
 
 
 @app.post("/ingest")

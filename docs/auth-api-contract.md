@@ -23,6 +23,7 @@
 - 외부 인증 공급자는 **Supabase Auth**
 - 모바일 앱은 Supabase 세션을 가진다
 - 앱 백엔드는 Supabase access token을 검증한다
+- 현재 앱 UX는 `회원가입(이메일+비밀번호+이메일 확인)` / `로그인(이메일+비밀번호)` 로 분리한다
 
 즉:
 
@@ -87,6 +88,21 @@ type SessionUser = {
 중요:
 
 - 앱의 “로그인 완료” 기준은 단순히 토큰 존재가 아니라 `/me` 성공이다
+
+### 회원가입 계약
+
+1. 앱은 Supabase `signUp(email, password)` 호출
+2. 이메일 확인이 완료되기 전까지는 signedIn 으로 간주하지 않는다
+3. 확인 링크로 앱 복귀 시 계정 확인 완료 상태만 표시한다
+4. 이후 사용자는 같은 이메일/비밀번호로 로그인한다
+
+### 비밀번호 재설정 계약
+
+1. 앱은 Supabase `resetPasswordForEmail(email, { redirectTo })` 호출
+2. 재설정 링크는 `archiveurl://auth/reset-password` 로 복귀한다
+3. 앱은 recovery 세션을 감지하면 `새 비밀번호 설정` 화면을 연다
+4. 새 비밀번호 저장은 Supabase `updateUser({ password })` 로 처리한다
+5. 저장 후 `/me` 성공을 로그인 완료 기준으로 본다
 
 ## 6. 에러 응답 규약
 
@@ -227,6 +243,7 @@ Authorization: Bearer <access_token>
 
 - 즉시 hard delete보다 soft delete 우선
 - 이후 비동기 삭제 작업으로 문서/작업 정리 가능
+- 현재 ArchiveURL 구현은 `soft delete`를 사용하며, 동일한 이메일/인증 주체로 다시 로그인하면 계정과 기존 데이터가 복구된다
 
 응답 `202`:
 

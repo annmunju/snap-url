@@ -65,3 +65,9 @@ class UsersRepository:
         user.deleted_at = datetime.now(timezone.utc)
         self.session.flush()
         return user
+
+    def reactivate(self, user: User) -> User:
+        user.status = "active"
+        user.deleted_at = None
+        self.session.flush()
+        return user

@@ -9,6 +9,7 @@ import { HomeScreen } from "@/screens/HomeScreen";
 import { DocumentsScreen } from "@/screens/DocumentsScreen";
 import { DocumentDetailScreen } from "@/screens/DocumentDetailScreen";
 import { EditDocumentScreen } from "@/screens/EditDocumentScreen";
+import { ResetPasswordScreen } from "@/screens/ResetPasswordScreen";
 import { SignInScreen } from "@/screens/SignInScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -24,6 +25,7 @@ const linking: LinkingOptions<RootStackParamList> = {
           Documents: "documents",
         },
       },
+      ResetPassword: "auth/reset-password",
       DocumentDetail: "documents/:documentId",
       EditDocument: "documents/:documentId/edit",
     },
@@ -58,7 +60,7 @@ function Tabs() {
 }
 
 export function RootNavigator() {
-  const { state } = useAuth();
+  const { state, passwordRecovery } = useAuth();
 
   return (
     <NavigationContainer
@@ -78,6 +80,8 @@ export function RootNavigator() {
             component={BootScreen}
             options={{ headerShown: false }}
           />
+        ) : passwordRecovery ? (
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
         ) : state.status === "signedOut" ? (
           <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
         ) : (

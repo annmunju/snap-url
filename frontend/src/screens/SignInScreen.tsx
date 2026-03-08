@@ -9,13 +9,49 @@ function isValidEmail(value: string) {
   return /\S+@\S+\.\S+/.test(value);
 }
 
+function getFriendlyAuthErrorMessage(error: unknown, mode: "signin" | "signup" | "reset") {
+  const fallback = "다시 시도해 주세요.";
+  if (!(error instanceof Error)) {
+    return fallback;
+  }
+
+  const normalized = error.message.trim().toLowerCase();
+  if (mode === "signin") {
+    if (normalized.includes("invalid login credentials")) {
+      return "이메일 또는 비밀번호가 올바르지 않습니다.";
+    }
+    if (normalized.includes("email not confirmed")) {
+      return "이메일 확인이 아직 끝나지 않았습니다. 받은 편지함의 확인 메일을 먼저 열어주세요.";
+    }
+    if (normalized.includes("account deleted")) {
+      return "삭제된 계정입니다. 같은 이메일로 회원가입하면 기존 데이터를 복구할 수 있습니다.";
+    }
+  }
+
+  if (mode === "signup") {
+    if (normalized.includes("user already registered")) {
+      return "이미 가입된 이메일입니다. 로그인으로 진행해 주세요.";
+    }
+  }
+
+  if (mode === "reset") {
+    if (normalized.includes("for security purposes")) {
+      return "잠시 후 다시 시도해 주세요.";
+    }
+  }
+
+  return error.message || fallback;
+}
+
 export function SignInScreen() {
-  const { signInWithPassword, signUpWithPassword, pendingSignup, clearPendingSignup } = useAuth();
+  const { signInWithPassword, signUpWithPassword, sendPasswordResetEmail, pendingSignup, clearPendingSignup } =
+    useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [submittedMode, setSubmittedMode] = useState<"signin" | "signup" | null>(null);
+  const [passwordResetSentTo, setPasswordResetSentTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isSignIn = mode === "signin";
@@ -30,6 +66,25 @@ export function SignInScreen() {
     setPasswordConfirm("");
     setSubmittedMode(null);
   }, [pendingSignup]);
+
+  const onPasswordReset = async () => {
+    const trimmed = email.trim();
+    if (!isValidEmail(trimmed)) {
+      Alert.alert("이메일 확인", "비밀번호를 재설정할 이메일 주소를 입력해 주세요.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(trimmed);
+      setPasswordResetSentTo(trimmed);
+      Alert.alert("재설정 메일 전송 완료", `${trimmed} 주소로 비밀번호 재설정 메일을 보냈습니다.`);
+    } catch (error) {
+      Alert.alert("비밀번호 재설정 실패", getFriendlyAuthErrorMessage(error, "reset"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onSubmit = async (mode: "signin" | "signup") => {
     const trimmed = email.trim();
@@ -53,11 +108,12 @@ export function SignInScreen() {
       } else {
         await signUpWithPassword(trimmed, password);
       }
+      setPasswordResetSentTo(null);
       setSubmittedMode(mode);
     } catch (error) {
       Alert.alert(
         mode === "signin" ? "로그인 실패" : "회원가입 실패",
-        error instanceof Error ? error.message : "다시 시도해 주세요."
+        getFriendlyAuthErrorMessage(error, mode),
       );
     } finally {
       setLoading(false);
@@ -72,7 +128,7 @@ export function SignInScreen() {
         <Text style={styles.body}>
           {isSignIn
             ? "이메일과 비밀번호로 바로 로그인합니다."
-            : "이메일과 비밀번호로 계정을 만들고, 확인 메일로 계정을 활성화합니다."}
+            : "이메일과 비밀번호로 계정을 만들고, 확인 메일로 계정을 활성화합니다. 삭제했던 계정은 같은 이메일로 다시 가입하면 복구할 수 있습니다."}
         </Text>
       </View>
 
@@ -114,6 +170,9 @@ export function SignInScreen() {
               placeholder="비밀번호 다시 입력"
               placeholderTextColor={colors.textSecondary}
             />
+            <Text style={styles.helperText}>
+              삭제했던 계정이라면 이전 비밀번호를 입력하면 바로 복구됩니다. 비밀번호가 기억나지 않으면 먼저 재설정해 주세요.
+            </Text>
           </>
         ) : null}
         <PrimaryButton
@@ -122,6 +181,11 @@ export function SignInScreen() {
           disabled={loading}
           loading={loading}
         />
+        {isSignIn ? (
+          <Pressable onPress={() => void onPasswordReset()} style={styles.secondaryAction}>
+            <Text style={styles.secondaryActionText}>비밀번호를 잊으셨나요?</Text>
+          </Pressable>
+        ) : null}
         {pendingSignup?.status === "requested" && !isSignIn ? (
           <View style={styles.notice}>
             <Text style={styles.noticeTitle}>이메일 확인이 필요합니다.</Text>
@@ -150,6 +214,14 @@ export function SignInScreen() {
             </Text>
           </View>
         ) : null}
+        {passwordResetSentTo && isSignIn ? (
+          <View style={styles.notice}>
+            <Text style={styles.noticeTitle}>비밀번호 재설정 메일을 보냈습니다.</Text>
+            <Text style={styles.noticeBody}>
+              {passwordResetSentTo} 메일의 링크를 열면 새 비밀번호를 입력할 수 있습니다.
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.footerSwitch}>
           <Text style={styles.footerSwitchText}>
             {isSignIn ? "처음 오셨나요?" : "이미 계정이 있나요?"}
@@ -158,6 +230,7 @@ export function SignInScreen() {
             onPress={() => {
               setMode(isSignIn ? "signup" : "signin");
               setSubmittedMode(null);
+              setPasswordResetSentTo(null);
               setPassword("");
               setPasswordConfirm("");
               if (isSignIn) {
@@ -230,6 +303,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
+  helperText: {
+    fontFamily: "System",
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginTop: -2,
+  },
   notice: {
     backgroundColor: "#F3F8F3",
     borderRadius: radius.lg,
@@ -261,6 +341,16 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   footerSwitchAction: {
+    fontFamily: "System",
+    fontWeight: "700",
+    fontSize: 14,
+    color: colors.primary,
+  },
+  secondaryAction: {
+    alignSelf: "center",
+    paddingTop: 2,
+  },
+  secondaryActionText: {
     fontFamily: "System",
     fontWeight: "700",
     fontSize: 14,
