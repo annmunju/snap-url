@@ -2,6 +2,7 @@ node_modules
 dist
 .env
 .env.staging
+.env.production
 data
 .DS_Store
 .venv
