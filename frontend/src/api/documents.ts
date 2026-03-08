@@ -3,6 +3,7 @@ import type { CategoryItem, Document, DocumentListItem, ExtractedLink } from "./
 
 type ListDocumentsResponse = {
   items: DocumentListItem[];
+  total: number;
 };
 
 type GetDocumentResponse = {

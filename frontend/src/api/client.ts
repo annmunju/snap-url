@@ -6,12 +6,14 @@ class ApiError extends Error {
   status: number;
   code: string;
   retryable: boolean;
+  requestId?: string;
 
-  constructor(status: number, code: string, message: string, retryable: boolean) {
+  constructor(status: number, code: string, message: string, retryable: boolean, requestId?: string) {
     super(message);
     this.status = status;
     this.code = code;
     this.retryable = retryable;
+    this.requestId = requestId;
   }
 }
 
@@ -22,6 +24,17 @@ const fallbackBaseUrl = "http://localhost:3000";
 export const API_BASE_URL = explicitBaseUrl ?? inferredBaseUrl ?? fallbackBaseUrl;
 
 export { ApiError };
+
+function createRequestId() {
+  return `app-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function formatErrorMessage(message: string, requestId?: string) {
+  if (!requestId) {
+    return message;
+  }
+  return `${message}\n\n오류 ID: ${requestId}`;
+}
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return baseFetch<T>(path, init);
@@ -44,17 +57,19 @@ export async function authFetch<T>(path: string, init?: RequestInit): Promise<T>
 }
 
 async function baseFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const requestId = createRequestId();
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",
+        "X-Request-Id": requestId,
         ...(init?.headers ?? {}),
       },
     });
   } catch {
-    throw new Error(`API 연결 실패: ${API_BASE_URL}`);
+    throw new Error(`API 연결 실패: ${API_BASE_URL}\n\n오류 ID: ${requestId}`);
   }
 
   if (!response.ok) {
@@ -68,8 +83,12 @@ async function baseFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const error = new ApiError(
       response.status,
       errorBody?.error.code ?? "INTERNAL_ERROR",
-      errorBody?.error.message ?? "요청 처리 중 오류가 발생했습니다.",
+      formatErrorMessage(
+        errorBody?.error.message ?? "요청 처리 중 오류가 발생했습니다.",
+        errorBody?.request_id ?? response.headers.get("X-Request-Id") ?? requestId,
+      ),
       errorBody?.error.retryable ?? false,
+      errorBody?.request_id ?? response.headers.get("X-Request-Id") ?? requestId,
     );
     if (
       response.status === 401 ||

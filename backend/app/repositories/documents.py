@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 from uuid import UUID
 
-from sqlalchemy import Select, delete, select, update
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..models import Document
@@ -71,6 +71,10 @@ class DocumentsRepository:
             .offset(offset)
         ).all()
         return [_map_document(row) for row in rows]
+
+    def count_documents(self, user_id: UUID) -> int:
+        count = self.session.scalar(select(func.count()).select_from(Document).where(Document.user_id == user_id))
+        return int(count or 0)
 
     def update_document_by_id(self, user_id: UUID, doc_id: int, patch: dict[str, Any]) -> Optional[dict[str, Any]]:
         row = self.session.scalar(select(Document).where(Document.user_id == user_id, Document.id == doc_id))

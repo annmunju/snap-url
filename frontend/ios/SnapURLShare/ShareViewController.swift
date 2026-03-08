@@ -3,6 +3,8 @@ import UniformTypeIdentifiers
 
 private let sharedAppGroup = "group.com.archiveurl.app"
 private let sharedPayloadKey = "pendingSharedIngestPayload"
+private let sharedAccessTokenKey = "sharedIngestAccessToken"
+private let sharedApiBaseUrlKey = "sharedIngestApiBaseUrl"
 
 final class ShareViewController: SLComposeServiceViewController {
   override func isContentValid() -> Bool {
@@ -21,9 +23,18 @@ final class ShareViewController: SLComposeServiceViewController {
         return
       }
 
-      self.persistSharedPayload(url: sharedURL, note: self.normalizedNote())
-      self.openHostApp()
-      self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+      self.submitSharedIngest(url: sharedURL, note: self.normalizedNote()) { success in
+        DispatchQueue.main.async {
+          if success {
+            self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            return
+          }
+
+          self.persistSharedPayload(url: sharedURL, note: self.normalizedNote())
+          self.openHostApp()
+          self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        }
+      }
     }
   }
 
@@ -99,6 +110,53 @@ final class ShareViewController: SLComposeServiceViewController {
     let defaults = UserDefaults(suiteName: sharedAppGroup)
     defaults?.set(json, forKey: sharedPayloadKey)
     defaults?.synchronize()
+  }
+
+  private func submitSharedIngest(url: String, note: String?, completion: @escaping (Bool) -> Void) {
+    guard let sharedDefaults = UserDefaults(suiteName: sharedAppGroup) else {
+      completion(false)
+      return
+    }
+
+    guard let accessToken = sharedDefaults.string(forKey: sharedAccessTokenKey)?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !accessToken.isEmpty,
+          let apiBaseUrl = sharedDefaults.string(forKey: sharedApiBaseUrlKey)?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !apiBaseUrl.isEmpty else {
+      completion(false)
+      return
+    }
+
+    guard let endpointURL = URL(string: "/ingest", relativeTo: URL(string: apiBaseUrl)) else {
+      completion(false)
+      return
+    }
+
+    var payload: [String: String] = [
+      "url": url,
+    ]
+    if let note, !note.isEmpty {
+      payload["description"] = note
+    }
+
+    guard let body = try? JSONSerialization.data(withJSONObject: payload, options: []) else {
+      completion(false)
+      return
+    }
+
+    var request = URLRequest(url: endpointURL)
+    request.httpMethod = "POST"
+    request.httpBody = body
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+    let task = URLSession.shared.dataTask(with: request) { _, response, _ in
+      guard let httpResponse = response as? HTTPURLResponse else {
+        completion(false)
+        return
+      }
+      completion((200...299).contains(httpResponse.statusCode))
+    }
+    task.resume()
   }
 
   private func openHostApp() {

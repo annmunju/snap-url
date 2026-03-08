@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
-import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, AppState, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { deleteDocument, listCategories, listDocuments, patchDocument } from "@/api/documents";
 import { CategoryChips } from "@/components/CategoryChips";
@@ -97,6 +97,18 @@ export function DocumentsScreen() {
     return () => clearTimeout(timer);
   }, [queryClient, route.params?.refreshDelayMs, route.params?.refreshToken]);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        void Promise.all([query.refetch(), categoriesQuery.refetch()]);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [categoriesQuery, query]);
+
   const deleteMutation = useMutation({
     mutationFn: (documentId: number) => deleteDocument(documentId),
     onMutate: async (documentId) => {
@@ -145,6 +157,7 @@ export function DocumentsScreen() {
     () => query.data?.pages.flatMap((page) => page.items) ?? [],
     [query.data?.pages],
   );
+  const totalCount = query.data?.pages[0]?.total ?? allItems.length;
   const categoryOptions = useMemo<CategoryItem[]>(
     () => [
       { key: ALL_CATEGORY_KEY, label: "전체", order: -1 },
@@ -231,7 +244,9 @@ export function DocumentsScreen() {
       <View style={styles.categorySection}>
         <View style={styles.categoryHeader}>
           <Text style={styles.categoryLabel}>{isSearchOpen ? "검색 결과" : "카테고리"}</Text>
-          <Text style={styles.categoryMeta}>{filtered.length}</Text>
+          <Text style={styles.categoryMeta}>
+            {normalizedSearchQuery || category !== ALL_CATEGORY_KEY ? `${filtered.length} / ${totalCount}` : totalCount}
+          </Text>
         </View>
         <CategoryChips options={categoryOptions} value={category} onChange={setCategory} />
       </View>

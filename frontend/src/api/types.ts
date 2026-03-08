@@ -69,4 +69,5 @@ export type ApiErrorBody = {
     message: string;
     retryable: boolean;
   };
+  request_id?: string;
 };

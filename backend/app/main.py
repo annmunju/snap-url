@@ -1,7 +1,8 @@
+from time import perf_counter
 from uuid import UUID, uuid4
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Header, Query
+from fastapi import Depends, FastAPI, Header, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from pydantic import ValidationError
@@ -10,7 +11,6 @@ from sqlalchemy.orm import Session
 from .auth import (
     AuthConfigError,
     AuthenticationError,
-    auth_error_response,
     check_supabase_health,
     get_session,
     require_current_user,
@@ -25,6 +25,7 @@ from .settings import settings
 from .types import DocumentsListQuery, IngestListQuery, IngestRequest, PatchDocumentRequest, PatchMeRequest
 
 app = FastAPI()
+REQUEST_ID_HEADER = "X-Request-Id"
 
 
 def error_response(code: str, message: str, retryable: bool, extra: Optional[dict] = None) -> dict:
@@ -38,6 +39,41 @@ def error_response(code: str, message: str, retryable: bool, extra: Optional[dic
     if extra:
         payload.update(extra)
     return payload
+
+
+def get_request_id(request: Request) -> str:
+    return getattr(request.state, "request_id", "")
+
+
+def response_with_request_id(response: Response, request_id: str) -> Response:
+    if request_id:
+        response.headers[REQUEST_ID_HEADER] = request_id
+    return response
+
+
+def log_request(message: str) -> None:
+    print(message)
+
+
+@app.middleware("http")
+async def request_context_middleware(request: Request, call_next):
+    request_id = (request.headers.get(REQUEST_ID_HEADER) or "").strip() or str(uuid4())
+    request.state.request_id = request_id
+    started_at = perf_counter()
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        duration_ms = round((perf_counter() - started_at) * 1000, 2)
+        log_request(
+            f"[request_id={request_id}] {request.method} {request.url.path} -> unhandled_exception ({duration_ms}ms)"
+        )
+        raise
+
+    duration_ms = round((perf_counter() - started_at) * 1000, 2)
+    response.headers[REQUEST_ID_HEADER] = request_id
+    log_request(f"[request_id={request_id}] {request.method} {request.url.path} -> {response.status_code} ({duration_ms}ms)")
+    return response
 
 
 def map_job_response(job: dict) -> dict:
@@ -60,45 +96,79 @@ def map_job_response(job: dict) -> dict:
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_request, exc: RequestValidationError):
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
     only_query_errors = bool(exc.errors()) and all(
         len(issue.get("loc", [])) > 0 and issue["loc"][0] == "query" for issue in exc.errors()
     )
     message = "Invalid query" if only_query_errors else "Invalid request body"
-    return JSONResponse(
+    response = JSONResponse(
         status_code=400,
-        content=error_response("INVALID_REQUEST_BODY", message, False, {"issues": exc.errors()}),
+        content=error_response(
+            "INVALID_REQUEST_BODY",
+            message,
+            False,
+            {"issues": exc.errors(), "request_id": get_request_id(request)},
+        ),
     )
+    return response_with_request_id(response, get_request_id(request))
 
 
 @app.exception_handler(ValidationError)
-async def pydantic_validation_exception_handler(_request, exc: ValidationError):
-    return JSONResponse(
+async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):
+    response = JSONResponse(
         status_code=400,
-        content=error_response("INVALID_REQUEST_BODY", "Invalid request body", False, {"issues": exc.errors()}),
+        content=error_response(
+            "INVALID_REQUEST_BODY",
+            "Invalid request body",
+            False,
+            {"issues": exc.errors(), "request_id": get_request_id(request)},
+        ),
     )
+    return response_with_request_id(response, get_request_id(request))
 
 
 @app.exception_handler(AuthenticationError)
-async def auth_exception_handler(_request, exc: AuthenticationError):
-    return auth_error_response(exc)
+async def auth_exception_handler(request: Request, exc: AuthenticationError):
+    response = JSONResponse(
+        status_code=exc.status_code,
+        content=error_response(
+            exc.code,
+            exc.message,
+            exc.retryable,
+            {"request_id": get_request_id(request)},
+        ),
+    )
+    return response_with_request_id(response, get_request_id(request))
 
 
 @app.exception_handler(AuthConfigError)
-async def auth_config_exception_handler(_request, exc: AuthConfigError):
-    return JSONResponse(
+async def auth_config_exception_handler(request: Request, exc: AuthConfigError):
+    response = JSONResponse(
         status_code=503,
-        content=error_response("AUTH_NOT_CONFIGURED", str(exc) or "Auth is not configured", False),
+        content=error_response(
+            "AUTH_NOT_CONFIGURED",
+            str(exc) or "Auth is not configured",
+            False,
+            {"request_id": get_request_id(request)},
+        ),
     )
+    return response_with_request_id(response, get_request_id(request))
 
 
 @app.exception_handler(Exception)
-async def unhandled_exception_handler(_request, exc: Exception):
-    print(f"unhandled exception: {type(exc).__name__}: {exc}")
-    return JSONResponse(
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    request_id = get_request_id(request)
+    log_request(f"[request_id={request_id}] unhandled exception: {type(exc).__name__}: {exc}")
+    response = JSONResponse(
         status_code=500,
-        content=error_response("INTERNAL_ERROR", str(exc) or "Internal server error", False),
+        content=error_response(
+            "INTERNAL_ERROR",
+            str(exc) or "Internal server error",
+            False,
+            {"request_id": request_id},
+        ),
     )
+    return response_with_request_id(response, request_id)
 
 
 @app.on_event("startup")
@@ -327,7 +397,11 @@ async def list_documents(
             status_code=400,
             content=error_response("INVALID_REQUEST_BODY", "Invalid query", False, {"issues": exc.errors()}),
         )
-    return {"items": DocumentsRepository(session).list_documents(UUID(current_user.id), parsed.limit, parsed.offset)}
+    repo = DocumentsRepository(session)
+    return {
+        "items": repo.list_documents(UUID(current_user.id), parsed.limit, parsed.offset),
+        "total": repo.count_documents(UUID(current_user.id)),
+    }
 
 
 @app.get("/categories")

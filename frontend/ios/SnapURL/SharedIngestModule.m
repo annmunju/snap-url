@@ -2,6 +2,8 @@
 
 static NSString *const kSharedIngestAppGroup = @"group.com.archiveurl.app";
 static NSString *const kSharedIngestPayloadKey = @"pendingSharedIngestPayload";
+static NSString *const kSharedIngestAccessTokenKey = @"sharedIngestAccessToken";
+static NSString *const kSharedIngestApiBaseUrlKey = @"sharedIngestApiBaseUrl";
 
 @implementation SharedIngestModule
 
@@ -56,6 +58,47 @@ RCT_REMAP_METHOD(consumePendingSharedUrl,
   }
 
   resolve(payload);
+}
+
+RCT_REMAP_METHOD(syncSharedIngestAuthContext,
+                 syncSharedIngestAuthContextWithAccessToken:(NSString *)accessToken
+                 apiBaseUrl:(NSString *)apiBaseUrl
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+  NSUserDefaults *sharedDefaults = [[NSUserDefaults alloc] initWithSuiteName:kSharedIngestAppGroup];
+  if (sharedDefaults == nil) {
+    reject(@"shared_ingest_unavailable", @"App Group defaults are unavailable", nil);
+    return;
+  }
+
+  NSString *normalizedAccessToken = [accessToken stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+  NSString *normalizedApiBaseUrl = [apiBaseUrl stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+  if (normalizedAccessToken.length == 0 || normalizedApiBaseUrl.length == 0) {
+    reject(@"shared_ingest_invalid_context", @"Access token and API base URL are required", nil);
+    return;
+  }
+
+  [sharedDefaults setObject:normalizedAccessToken forKey:kSharedIngestAccessTokenKey];
+  [sharedDefaults setObject:normalizedApiBaseUrl forKey:kSharedIngestApiBaseUrlKey];
+  [sharedDefaults synchronize];
+  resolve(@YES);
+}
+
+RCT_REMAP_METHOD(clearSharedIngestAuthContext,
+                 clearSharedIngestAuthContextWithResolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+  NSUserDefaults *sharedDefaults = [[NSUserDefaults alloc] initWithSuiteName:kSharedIngestAppGroup];
+  if (sharedDefaults == nil) {
+    resolve(@YES);
+    return;
+  }
+
+  [sharedDefaults removeObjectForKey:kSharedIngestAccessTokenKey];
+  [sharedDefaults removeObjectForKey:kSharedIngestApiBaseUrlKey];
+  [sharedDefaults synchronize];
+  resolve(@YES);
 }
 
 + (BOOL)requiresMainQueueSetup

@@ -4,6 +4,8 @@ import * as SecureStore from "expo-secure-store";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { AuthContext, type AuthState, type PasswordRecoveryState, type PendingSignupState } from "./context";
+import { API_BASE_URL } from "@/api/client";
+import { clearSharedIngestAuthContext, syncSharedIngestAuthContext } from "@/native/sharedIngest";
 import { getCurrentUserProfile, reactivateCurrentUser } from "./api";
 import { registerAccessTokenProvider, registerUnauthorizedHandler } from "./bridge";
 import { supabase } from "./supabase";
@@ -77,6 +79,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const applySession = async (session: Session | null, options?: { rethrow?: boolean }) => {
     if (!session?.access_token) {
+      await clearSharedIngestAuthContext();
       setState({ status: "signedOut" });
       return;
     }
@@ -88,10 +91,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         accessToken: session.access_token,
         user: profile.user,
       });
+      await syncSharedIngestAuthContext(session.access_token, API_BASE_URL);
       await clearPendingSignup();
       await clearPasswordRecoveryState();
     } catch (error) {
       await supabase.auth.signOut();
+      await clearSharedIngestAuthContext();
       setState({ status: "signedOut" });
       if (options?.rethrow) {
           throw error;
@@ -101,6 +106,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const applyAccessToken = async (accessToken: string | null, options?: { rethrow?: boolean }) => {
     if (!accessToken) {
+      await clearSharedIngestAuthContext();
       setState({ status: "signedOut" });
       return;
     }
@@ -112,9 +118,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         accessToken,
         user: profile.user,
       });
+      await syncSharedIngestAuthContext(accessToken, API_BASE_URL);
       await clearPendingSignup();
       await clearPasswordRecoveryState();
     } catch (error) {
+      await clearSharedIngestAuthContext();
       setState({ status: "signedOut" });
       if (options?.rethrow) {
         throw error;
@@ -129,6 +137,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       passwordRecoveryFlowRef.current = false;
       await supabase.auth.signOut();
       await SecureStore.deleteItemAsync(DEV_ACCESS_TOKEN_KEY);
+      await clearSharedIngestAuthContext();
       await clearPendingSignup();
       await clearPasswordRecoveryState();
       await queryClient.cancelQueries();
@@ -188,6 +197,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           accessToken: signInResult.data.session.access_token,
           user: profile.user,
         });
+        await syncSharedIngestAuthContext(signInResult.data.session.access_token, API_BASE_URL);
         await clearPendingSignup();
         await clearPasswordRecoveryState();
         return;
@@ -212,6 +222,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         accessToken: signInResult.data.session.access_token,
         user: profile.user,
       });
+      await syncSharedIngestAuthContext(signInResult.data.session.access_token, API_BASE_URL);
       await clearPendingSignup();
       await clearPasswordRecoveryState();
       return;
@@ -249,6 +260,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const cancelPasswordRecovery = async () => {
     passwordRecoveryFlowRef.current = false;
     await clearPasswordRecoveryState();
+    await clearSharedIngestAuthContext();
     await supabase.auth.signOut();
     setState({ status: "signedOut" });
   };
