@@ -159,7 +159,7 @@
 
 ## 5. 환경 변수
 - `PORT` (기본 `3000`)
-- `DB_PATH` (기본 `./data/snap-url.db`)
+- `DB_PATH` (기본 `./data/archive-url.db`)
 - `JINA_FETCH_TIMEOUT_MS` (기본 `20000`)
 - `INGEST_CONCURRENCY` (기본 `1`)
 - `OPENAI_API_KEY` (없으면 fallback summary)

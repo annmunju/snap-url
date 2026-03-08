@@ -27,7 +27,7 @@ python run.py
 ## 환경변수
 
 - `PORT` (default: `3000`)
-- `DB_PATH` (default: `./data/snap-url.db`)
+- `DB_PATH` (default: `./data/archive-url.db`)
 - `JINA_FETCH_TIMEOUT_MS` (default: `20000`)
 - `INGEST_CONCURRENCY` (default: `1`)
 - `OPENAI_API_KEY` (없으면 fallback summary)
