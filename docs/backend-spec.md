@@ -269,12 +269,15 @@ ENVIRONMENT=production PYTHONPATH=backend ./.venv/bin/python run.py
 
 - `railway.json`
 - `backend/Dockerfile`
+- `backend/scripts/railway-predeploy.sh`
+- `backend/scripts/railway-start.sh`
 
 배포 방식:
 
 - Railway service는 repo root를 소스로 사용
 - Dockerfile은 `backend/Dockerfile`
-- pre-deploy에서 `alembic upgrade head`
+- pre-deploy는 `backend/scripts/railway-predeploy.sh`
+- start는 `backend/scripts/railway-start.sh`
 - healthcheck는 `/health`
 
 필수 Railway 변수:

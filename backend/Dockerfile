@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY backend /app/backend
 
+RUN chmod +x /app/backend/scripts/railway-predeploy.sh /app/backend/scripts/railway-start.sh
+
 EXPOSE 3000
 
-CMD ["sh", "-c", "PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-3000}"]
+CMD ["/app/backend/scripts/railway-start.sh"]

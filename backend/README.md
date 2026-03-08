@@ -26,12 +26,16 @@ ENVIRONMENT=staging python run.py
 
 - `railway.json`
 - `backend/Dockerfile`
+- `backend/scripts/railway-predeploy.sh`
+- `backend/scripts/railway-start.sh`
 
 권장 설정:
 
 - Source repo root: repository root
 - Config as code: root `railway.json`
 - Dockerfile: `backend/Dockerfile`
+- Start command: `backend/scripts/railway-start.sh`
+- Pre-deploy command: `backend/scripts/railway-predeploy.sh`
 
 필수 Railway 변수:
 

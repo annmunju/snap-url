@@ -9,8 +9,8 @@
     ]
   },
   "deploy": {
-    "startCommand": "PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port $PORT",
-    "preDeployCommand": "PYTHONPATH=. alembic -c alembic.ini upgrade head",
+    "startCommand": "/app/backend/scripts/railway-start.sh",
+    "preDeployCommand": "/app/backend/scripts/railway-predeploy.sh",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
