@@ -67,7 +67,10 @@ export function EditDocumentScreen({ route, navigation }: Props) {
   const sanitizedLinks = useMemo<SanitizedLink[]>(
     () =>
       links
-        .map((link) => ({ url: link.url.trim(), content: link.content.trim() }))
+        .map((link) => ({
+          url: link.url.trim(),
+          content: link.content.trim() || safeLinkLabel(link.url.trim()),
+        }))
         .filter((link) => link.content.length > 0 && isHttpUrl(link.url)),
     [links],
   );
@@ -145,9 +148,8 @@ export function EditDocumentScreen({ route, navigation }: Props) {
   });
 
   const canAddLink = useMemo(() => {
-    if (!newUrl || !newContent) return false;
     return isHttpUrl(newUrl);
-  }, [newContent, newUrl]);
+  }, [newUrl]);
 
   const hasChanges = useMemo(() => {
     return Object.keys(patchPayload).length > 0;
@@ -157,7 +159,15 @@ export function EditDocumentScreen({ route, navigation }: Props) {
 
   const addLink = () => {
     if (!canAddLink) return;
-    setLinks((prev) => [...prev, { url: newUrl.trim(), content: newContent.trim() }]);
+    const trimmedUrl = newUrl.trim();
+    const trimmedContent = newContent.trim();
+    setLinks((prev) => [
+      {
+        url: trimmedUrl,
+        content: trimmedContent || safeLinkLabel(trimmedUrl),
+      },
+      ...prev,
+    ]);
     setNewUrl("");
     setNewContent("");
   };
@@ -192,12 +202,9 @@ export function EditDocumentScreen({ route, navigation }: Props) {
           <Text style={styles.label}>요약</Text>
           <Text style={styles.sectionMeta}>읽기 전용</Text>
         </View>
-        <TextInput
-          value={summary}
-          editable={false}
-          style={[styles.input, styles.multiInput, styles.readOnlyInput]}
-          multiline
-        />
+        <View style={[styles.input, styles.readOnlyInput, styles.summaryBlock]}>
+          <Text style={styles.summaryText}>{summary || "요약이 없습니다."}</Text>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -224,7 +231,7 @@ export function EditDocumentScreen({ route, navigation }: Props) {
 
       <View style={styles.section}>
         <View style={styles.linkHeader}>
-          <View style={styles.sectionHeader}>
+          <View style={styles.linkTitleGroup}>
             <Text style={styles.label}>링크</Text>
             <Text style={styles.sectionMeta}>{links.length}</Text>
           </View>
@@ -233,8 +240,20 @@ export function EditDocumentScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
         <View style={styles.linkComposer}>
-          <TextInput value={newUrl} onChangeText={setNewUrl} style={styles.input} placeholder="https://example.com" />
-          <TextInput value={newContent} onChangeText={setNewContent} style={styles.input} placeholder="링크 설명" />
+          <View style={styles.linkComposerCard}>
+            <TextInput
+              value={newUrl}
+              onChangeText={setNewUrl}
+              style={styles.input}
+              placeholder="https://example.com"
+            />
+            <TextInput
+              value={newContent}
+              onChangeText={setNewContent}
+              style={styles.input}
+              placeholder="링크 설명 (선택)"
+            />
+          </View>
         </View>
         <View style={styles.linkList}>
           {links.map((link, index) => (
@@ -361,14 +380,28 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     backgroundColor: "#F9FAFC",
   },
+  summaryBlock: {
+    minHeight: 0,
+  },
+  summaryText: {
+    fontFamily: "System",
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textSecondary,
+  },
   linkHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 12,
   },
+  linkTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   addButton: {
-    minHeight: 30,
+    minHeight: 24,
     justifyContent: "center",
   },
   addText: {
@@ -382,6 +415,14 @@ const styles = StyleSheet.create({
   },
   linkComposer: {
     gap: 10,
+  },
+  linkComposerCard: {
+    gap: 10,
+    padding: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
   },
   linkList: {
     gap: 12,
@@ -440,4 +481,13 @@ function isHttpUrl(value: string) {
 
 function isOriginalSourceLink(link: ExtractedLink) {
   return (link.content ?? "").trim().toLowerCase() === "original source";
+}
+
+function safeLinkLabel(url: string) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname || url;
+  } catch {
+    return url;
+  }
 }

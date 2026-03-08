@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -94,13 +94,6 @@ export function DocumentsScreen() {
     }, delay);
     return () => clearTimeout(timer);
   }, [queryClient, route.params?.refreshDelayMs, route.params?.refreshToken]);
-
-  useFocusEffect(
-    useCallback(() => {
-      queryClient.invalidateQueries({ queryKey: ["documents"] });
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-    }, [queryClient]),
-  );
 
   const deleteMutation = useMutation({
     mutationFn: (documentId: number) => deleteDocument(documentId),
